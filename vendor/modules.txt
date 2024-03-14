@@ -1,0 +1,21 @@
+# github.com/amarnathcjd/gogram v0.0.0-20240313072240-b5fb69a95eb8
+## explicit; go 1.22
+github.com/amarnathcjd/gogram
+github.com/amarnathcjd/gogram/internal/aes_ige
+github.com/amarnathcjd/gogram/internal/encoding/tl
+github.com/amarnathcjd/gogram/internal/keys
+github.com/amarnathcjd/gogram/internal/math
+github.com/amarnathcjd/gogram/internal/mode
+github.com/amarnathcjd/gogram/internal/mtproto/messages
+github.com/amarnathcjd/gogram/internal/mtproto/objects
+github.com/amarnathcjd/gogram/internal/session
+github.com/amarnathcjd/gogram/internal/transport
+github.com/amarnathcjd/gogram/internal/utils
+github.com/amarnathcjd/gogram/telegram
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
+# golang.org/x/net v0.21.0
+## explicit; go 1.18
+golang.org/x/net/html
+golang.org/x/net/html/atom

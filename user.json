@@ -1,0 +1,157 @@
+{
+  "FullUser": {
+    "Blocked": false,
+    "PhoneCallsAvailable": false,
+    "PhoneCallsPrivate": false,
+    "CanPinMessage": true,
+    "HasScheduled": false,
+    "VideoCallsAvailable": false,
+    "VoiceMessagesForbidden": false,
+    "TranslationsDisabled": false,
+    "StoriesPinnedAvailable": false,
+    "BlockedMyStoriesFrom": false,
+    "WallpaperOverridden": false,
+    "ContactRequirePremium": false,
+    "ReadDatesPrivate": false,
+    "ID": 5947154950,
+    "About": "FUNDAAAA",
+    "Settings": {
+      "ReportSpam": false,
+      "AddContact": false,
+      "BlockContact": false,
+      "ShareContact": false,
+      "NeedContactsException": false,
+      "ReportGeo": false,
+      "Autoarchived": false,
+      "InviteMembers": false,
+      "RequestChatBroadcast": false,
+      "GeoDistance": 0,
+      "RequestChatTitle": "",
+      "RequestChatDate": 0
+    },
+    "PersonalPhoto": null,
+    "ProfilePhoto": {
+      "HasStickers": false,
+      "ID": 6104743056155719751,
+      "AccessHash": 6230544301202414631,
+      "FileReference": "AGXy3fZeVoqgUxuKgHbkEqT6IgUS",
+      "Date": 1704440272,
+      "Sizes": [
+        {
+          "Type": "a",
+          "W": 160,
+          "H": 160,
+          "Size": 13370
+        },
+        {
+          "Type": "b",
+          "W": 320,
+          "H": 320,
+          "Size": 41180
+        },
+        {
+          "Type": "c",
+          "W": 640,
+          "H": 640,
+          "Size": 116647
+        }
+      ],
+      "VideoSizes": null,
+      "DcID": 5
+    },
+    "FallbackPhoto": null,
+    "NotifySettings": {
+      "ShowPreviews": true,
+      "Silent": false,
+      "MuteUntil": 0,
+      "IosSound": {},
+      "AndroidSound": {
+        "Title": "default",
+        "Data": "default"
+      },
+      "OtherSound": {
+        "Title": "default",
+        "Data": "default"
+      },
+      "StoriesMuted": false,
+      "StoriesHideSender": false,
+      "StoriesIosSound": null,
+      "StoriesAndroidSound": null,
+      "StoriesOtherSound": null
+    },
+    "BotInfo": {
+      "UserID": 0,
+      "Description": "HWWWWWWWWWWW",
+      "DescriptionPhoto": null,
+      "DescriptionDocument": null,
+      "Commands": null,
+      "MenuButton": null
+    },
+    "PinnedMsgID": 0,
+    "CommonChatsCount": 0,
+    "FolderID": 0,
+    "TtlPeriod": 0,
+    "ThemeEmoticon": "",
+    "PrivateForwardName": "",
+    "BotGroupAdminRights": null,
+    "BotBroadcastAdminRights": null,
+    "PremiumGifts": null,
+    "Wallpaper": null,
+    "Stories": null,
+    "BusinessWorkHours": null,
+    "BusinessLocation": null,
+    "BusinessGreetingMessage": null,
+    "BusinessAwayMessage": null
+  },
+  "Chats": [],
+  "Users": [
+    {
+      "Self": true,
+      "Contact": false,
+      "MutualContact": false,
+      "Deleted": false,
+      "Bot": true,
+      "BotChatHistory": true,
+      "BotNochats": false,
+      "Verified": false,
+      "Restricted": false,
+      "Min": false,
+      "BotInlineGeo": false,
+      "Support": false,
+      "Scam": false,
+      "ApplyMinPhoto": true,
+      "Fake": false,
+      "BotAttachMenu": false,
+      "Premium": false,
+      "AttachMenuEnabled": false,
+      "BotCanEdit": true,
+      "CloseFriend": false,
+      "StoriesHidden": false,
+      "StoriesUnavailable": true,
+      "ContactRequirePremium": false,
+      "ID": 5947154950,
+      "AccessHash": -2118573075300716926,
+      "FirstName": "Ha Ri ~",
+      "LastName": "",
+      "Username": "hImDBBot",
+      "Phone": "",
+      "Photo": {
+        "HasVideo": false,
+        "Personal": false,
+        "PhotoID": 6104743056155719751,
+        "StrippedThumb": null,
+        "DcID": 5
+      },
+      "Status": null,
+      "BotInfoVersion": 4,
+      "RestrictionReason": null,
+      "BotInlinePlaceholder": "",
+      "LangCode": "",
+      "EmojiStatus": null,
+      "Usernames": null,
+      "StoriesMaxID": 0,
+      "Color": null,
+      "ProfileColor": null
+    }
+  ]
+}

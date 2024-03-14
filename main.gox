@@ -1,0 +1,273 @@
+package main
+
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"math"
+	"reflect"
+
+	"github.com/pkg/errors"
+)
+
+func main() {
+	filename := "dumpK.bin"
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		panic(err)
+	}
+
+	d := &Decoder{buf: bytes.NewReader(data)}
+	fmt.Println("MENU\n1. PopLong\n2. PopDouble\n3. PopUint\n4. PopRawBytes\n5. PopBool\n6. PopNull\n7. PopCRC\n8. PopInt\n9. PopMessage\n10. GetRestOfMessage\n12. Exit")
+	for {
+		fmt.Print("Enter your choice: ")
+		var choice int
+		fmt.Scanln(&choice)
+		switch choice {
+		case 1:
+			fmt.Println("PopLong:", d.PopLong())
+		case 2:
+			fmt.Println("PopDouble:", d.PopDouble())
+		case 3:
+			fmt.Println("PopUint:", d.PopUint())
+		case 4:
+			fmt.Println("PopRawBytes:", d.PopRawBytes(10))
+		case 5:
+			fmt.Println("PopBool:", d.PopBool())
+		case 6:
+			d.PopNull()
+			fmt.Println("PopNull")
+		case 7:
+			fmt.Println("PopCRC:", d.PopCRC())
+		case 8:
+			fmt.Println("PopInt:", d.PopInt())
+		case 9:
+			fmt.Println("PopMessage:", d.PopMessage())
+		case 10:
+			// save the rest of the message to a file
+			rest, err := d.GetRestOfMessage()
+			if err != nil {
+				fmt.Println("GetRestOfMessage:", err)
+			} else {
+				ioutil.WriteFile("rest.bin", rest, 0644)
+				fmt.Println("GetRestOfMessage: rest.bin")
+			}
+		case 12:
+			fmt.Println("Exiting...")
+			return
+		default:
+			fmt.Println("Invalid choice")
+		}
+	}
+
+}
+
+type Decoder struct {
+	buf           *bytes.Reader
+	err           error
+	expectedTypes []reflect.Type
+}
+
+func NewDecoder(r io.Reader) (*Decoder, error) {
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "reading data before decoding")
+	}
+
+	return &Decoder{buf: bytes.NewReader(data)}, nil
+}
+
+func (d *Decoder) read(buf []byte) {
+	if d.err != nil {
+		return
+	}
+
+	n, err := d.buf.Read(buf)
+	if err != nil {
+		d.unread(n)
+		d.err = err
+		return
+	}
+
+	if n != len(buf) {
+		d.unread(n)
+		d.err = fmt.Errorf("buffer weren't fully read: want %v bytes, got %v", len(buf), n)
+		return
+	}
+}
+
+func (d *Decoder) unread(count int) {
+	for i := 0; i < count; i++ {
+		if d.buf.UnreadByte() != nil {
+			return
+		}
+	}
+}
+
+func (d *Decoder) PopLong() int64 {
+	val := make([]byte, LongLen)
+	d.read(val)
+	if d.err != nil {
+		return 0
+	}
+
+	return int64(binary.LittleEndian.Uint64(val))
+}
+
+func (d *Decoder) PopDouble() float64 {
+	val := make([]byte, DoubleLen)
+	d.read(val)
+	if d.err != nil {
+		return 0
+	}
+
+	return math.Float64frombits(binary.LittleEndian.Uint64(val))
+}
+
+func (d *Decoder) PopUint() uint32 {
+	val := make([]byte, WordLen)
+	d.read(val)
+	if d.err != nil {
+		return 0
+	}
+
+	return binary.LittleEndian.Uint32(val)
+}
+
+func (d *Decoder) PopRawBytes(size int) []byte {
+	val := make([]byte, size)
+	d.read(val)
+	if d.err != nil {
+		return nil
+	}
+
+	return val
+}
+
+func (d *Decoder) PopBool() bool {
+	crc := d.PopUint()
+	if d.err != nil {
+		return false
+	}
+
+	switch crc {
+	case CrcTrue:
+		return true
+	case CrcFalse:
+		return false
+	default:
+		d.err = fmt.Errorf("not a bool value, actually: %#v", crc)
+		return false
+	}
+}
+
+func (d *Decoder) PopNull() {
+	crc := d.PopUint()
+	if d.err != nil {
+		return
+	}
+
+	if crc != CrcNull {
+		d.err = fmt.Errorf("not a null value, actually: %#v", crc)
+		return
+	}
+}
+
+func (d *Decoder) PopCRC() uint32 {
+	return d.PopUint()
+}
+
+func (d *Decoder) PopInt() int32 {
+	return int32(d.PopUint())
+}
+
+func (d *Decoder) GetRestOfMessage() ([]byte, error) {
+	return io.ReadAll(d.buf)
+}
+
+func (d *Decoder) DumpWithoutRead() ([]byte, error) {
+	data, err := io.ReadAll(d.buf)
+	if err != nil {
+		return nil, err
+	}
+
+	d.unread(len(data))
+	return data, nil
+}
+
+func (d *Decoder) PopMessage() []byte {
+	val := []byte{0}
+
+	d.read(val)
+	if d.err != nil {
+		return nil
+	}
+
+	firstByte := val[0]
+
+	var realSize int
+	var lenNumberSize int
+
+	if firstByte != MagicNumber {
+		realSize = int(firstByte)
+		lenNumberSize = 1
+		//fmt.Println("firstByte", firstByte)
+	} else {
+		val = make([]byte, WordLen-1)
+		d.read(val)
+		if d.err != nil {
+			d.err = errors.Wrapf(d.err, "reading last %v bytes of message size", WordLen-1)
+			return nil
+		}
+
+		val = append(val, 0x0)
+
+		realSize = int(binary.LittleEndian.Uint32(val))
+		lenNumberSize = WordLen
+	}
+
+	buf := make([]byte, realSize)
+	d.read(buf)
+	if realSize == 68 {
+		ioutil.WriteFile("dump.bin", buf, 0644)
+	}
+	if d.err != nil {
+		d.err = errors.Wrapf(d.err, "reading message data with len of %v", realSize)
+		return nil
+	}
+
+	readLen := lenNumberSize + realSize
+	if readLen%WordLen != 0 {
+		voidBytes := make([]byte, WordLen-readLen%WordLen)
+		d.read(voidBytes)
+		if d.err != nil {
+			d.err = errors.Wrapf(d.err, "reading %v last void bytes", WordLen-readLen%WordLen)
+			return nil
+		}
+
+		for _, b := range voidBytes {
+			if b != 0 {
+				d.err = fmt.Errorf("some of void bytes doesn't equal zero: %#v", voidBytes)
+				return nil
+			}
+		}
+	}
+
+	return buf
+}
+
+const (
+	WordLen   = 4
+	LongLen   = WordLen * 2 // int64
+	DoubleLen = WordLen * 2 // float64
+	Int128Len = WordLen * 4 // int128
+	Int256Len = WordLen * 8 // int256
+
+	MagicNumber        = 0xfe // 253
+	CrcVector   uint32 = 0x1cb5c415
+	CrcFalse    uint32 = 0xbc799737
+	CrcTrue     uint32 = 0x997275b5
+	CrcNull     uint32 = 0x56730bcc
+)
