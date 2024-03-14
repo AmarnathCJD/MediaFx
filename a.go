@@ -19,7 +19,5 @@ func main() {
 		log.Fatal(err)
 	}
 
-	c, _ := client.GetSendableChannel("rosexchat")
-	client.GetSendableChannel(c)
-	client.ChannelsGetFullChannel(c)
+	//client.ChannelsGetFullChannel(c)
 }
