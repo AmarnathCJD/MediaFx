@@ -143,7 +143,7 @@ async def start_up_and_init():
         browser = await launch(headless=True,  executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
                                args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
     else:
-        browser = await launch(headless=True,  # executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        browser = await launch(headless=True,  executablePath="/usr/bin/google-chrome",
                                args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
 
     app = web.Application()
