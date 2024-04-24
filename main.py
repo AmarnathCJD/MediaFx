@@ -144,7 +144,6 @@ async def start_up_and_init():
                                args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
     else:
         browser = await launch(headless=True,  # executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-                               # '--proxy-server=socks5://lis.socks.ipvanish.com:1080', '--proxy-auth=6fUNyidVCgY:5shI6NljlqMY'])
                                args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
 
     app = web.Application()
