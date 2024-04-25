@@ -34,7 +34,10 @@ async def resolve_hash(request):
             if content:
                 content["status"] = 200
                 content["id"] = request.match_info['id']
-                return web.json_response(content)
+                try:
+                    content["file"] = content["sources"][0]["file"]
+                except:
+                    pass
             return web.Response(text="{\"error\": \"No sources found\"}", status=404)
 
     query_id = request.match_info['id']
