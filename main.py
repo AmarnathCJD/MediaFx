@@ -13,6 +13,23 @@ import json
 from urllib.parse import quote
 from dotenv import load_dotenv
 from os import getenv
+from yt_dlp import YoutubeDL
+
+async def get_yt_video_direct_url(video_id):
+    ydl_opts = {
+        'format': 'best',
+        'quiet': True,
+        'no_warnings': True,
+        'noplaylist': True,
+        'extract_flat': True,
+        'force_generic_extractor': True,
+        'skip_download': True,
+        'nocheckcertificate': True,
+    }
+    
+    with YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", download=False)
+        return info["url"]
 
 load_dotenv()
 
@@ -322,6 +339,12 @@ async def handle_title_request(request):
         return await _fetch_embed_source(request)
     elif request.path == "/api/featured":
         return web.json_response(await get_featured_titles())
+    elif request.path == "/api/":
+        return web.Response(text="200 OK")
+    elif request.path == "/api/trailer":
+        url = request.query.get("url")
+        id = url.split("/")[-1].split("?")[0]
+        return web.json_response({"url": await get_yt_video_direct_url(id)})
     return web.json_response({"error": "Invalid path"}, status=400)
 
 
