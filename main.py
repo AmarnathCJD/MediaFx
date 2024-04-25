@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO,
 LOG = logging.getLogger("main")
 
 browser = None
-PORT = getenv("PORT", 801)
+PORT = int(getenv("PORT", 801))
 
 async def resolve_hash(request):
     if not IS_ENCRYPTED:
