@@ -12,6 +12,8 @@ import logging
 import json
 from urllib.parse import quote
 
+IS_ENCRYPTED = False
+
 warnings.filterwarnings("ignore")
 logging.getLogger('pyppeteer').setLevel(logging.WARNING)
 logging.basicConfig(level=logging.INFO,
@@ -22,14 +24,26 @@ LOG = logging.getLogger("main")
 browser = None
 PORT = 80
 
-
 async def resolve_hash(request):
+    if not IS_ENCRYPTED:
+        async with ClientSession(timeout=ClientTimeout(total=10)) as session:
+            req = await session.get("https://megacloud.tv/embed-1/ajax/e-1/getSources?id={}".format(request.match_info['id']),
+                                    headers={"Referer": "https://megacloud.tv/embed-1/e-1/8G2ykDEjrCkq?z=",
+                                             "X-Requested-With": "XMLHttpRequest"})
+            content = await req.json()
+            if content:
+                content["status"] = 200
+                content["id"] = request.match_info['id']
+                return web.json_response(content)
+            return web.Response(text="{\"error\": \"No sources found\"}", status=404)
+
     query_id = request.match_info['id']
     if query_id == "" or query_id == "favicon.ico":
         return web.Response(text="Invalid request, please provide a valid hash", status=400)
     t = time.time()
 
-    page = await browser.newPage()
+    pages = await browser.pages()
+    page = pages[0]
 
     await page.setExtraHTTPHeaders({'Referer': 'https://megacloud.tv/embed-1/e-1/8G2ykDEjrCkq?z='})
     await page.setRequestInterception(True)
@@ -60,8 +74,8 @@ async def resolve_hash(request):
     await page.close()
 
     try:
-        content = json.loads(content.split('<div class="product"><pre>')[
-            1].split('</pre></div>')[0])
+        content = json.loads(content.split('<pre>')[
+            1].split('</pre>')[0])
         if len(content) > 0:
             content[0]["time_taken"] = "{:.2f}s".format(time.time() - t)
             content[0]["status"] = 200
@@ -80,25 +94,26 @@ async def resolve_hash(request):
 
 
 async def modify_request(request):
-    _start_time = time.time()
-    _timestamp = request.url.split("v=")[1].replace(".", "")
 
-    if (await get_last_timestamp()) < int(_timestamp):
+    # _start_time = time.time()
+    # _timestamp = request.url.split("v=")[1].replace(".", "")
 
-        await set_last_timestamp(int(_timestamp))
+    # if (await get_last_timestamp()) < int(_timestamp): # v1
 
-        with open("e-min.js", "wb") as file:
-            print("Downloading JS-{}...".format(_timestamp))
-            async with ClientSession(timeout=ClientTimeout(total=10)) as session:
-                resp = await session.get(request.url)
-                file.write(await resp.read())
+    #     await set_last_timestamp(int(_timestamp))
 
-        await _decode_js()
-        await _adjust_js()
+    #     with open("e-min.js", "wb") as file:
+    #         print("Downloading JS-{}...".format(_timestamp))
+    #         async with ClientSession(timeout=ClientTimeout(total=10)) as session:
+    #             resp = await session.get(request.url)
+    #             file.write(await resp.read())
 
-        LOG.info("JS-{} decoded and adjusted in {} seconds.".format(await get_last_timestamp(), time.time() - _start_time))
+    #     await _decode_js()
+    #     await _adjust_js()
 
-    with open("e-sim.js", "r") as file:
+    #     LOG.info("JS-{} decoded and adjusted in {} seconds.".format(await get_last_timestamp(), time.time() - _start_time))
+
+    with open("e-sim.js", "rb") as file:
         js = file.read()
         await request.respond({
             'status': 200,
@@ -109,6 +124,7 @@ async def modify_request(request):
 
 async def get_src_request(request):
     async with ClientSession(timeout=ClientTimeout(total=10)) as session:
+        # NOT USED, deprecated v1
         req = await session.get("http://localhost:3004/getSources?id={}".format(request.url.split("id=")[1]))
         content = await req.text()
 
@@ -136,33 +152,85 @@ async def req_write_to_console(request):
     print("Received request: ", await request.text())
 
 
-async def start_up_and_init():
-    global browser
+# ----------------- DB.py -----------------
+
+LOG = logging.getLogger("js")
+
+# -------------- Database --------------
+
+
+def connect_to_database():
+    connection = sqlite3.connect("data.db")
+    cursor = connection.cursor()
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS timestamps (
+                        id INTEGER PRIMARY KEY,
+                        timestamp INTEGER
+                    )''')
+    connection.commit()
+
+    return connection, cursor
+
+
+async def get_last_timestamp():
+    connection, cursor = connect_to_database()
+    cursor.execute('SELECT timestamp FROM timestamps')
+    row = cursor.fetchone()
+    connection.close()
+    if row:
+        return row[0]
+    return 0
+
+
+async def set_last_timestamp(timestamp):
+    connection, cursor = connect_to_database()
+    cursor.execute('DELETE FROM timestamps')
+    cursor.execute(
+        'INSERT INTO timestamps (timestamp) VALUES (?)', (timestamp,))
+    connection.commit()
+    connection.close()
+
+# -------------- JS Manipulation --------------
+
+
+async def _decode_js():
+    command = "webcrack e-min.js > e-sim.js"
+
     import sys
     if sys.platform == "win32":
-        browser = await launch(headless=True,  executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-                               args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
+        command = "webcrack e-min.js > e-sim.js"
+        proc = await asyncio.create_subprocess_shell(
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
     else:
-        browser = await launch(headless=True,  executablePath="/usr/bin/google-chrome",
-                               args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
+        command = "sudo " + command
+        proc = await asyncio.create_subprocess_shell(
+            f"bash -c \"{command}\"",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+    await proc.communicate()
+    LOG.info("JS-{} decoded.".format(await get_last_timestamp()))
 
-    app = web.Application()
-    app.router.add_get('/{id}', resolve_hash)
-    app.router.add_post('/write', req_write_to_console)
-    app.router.add_get('/api/{tail:.*}', handle_title_request)
 
-    async def index(request):
-        return web.Response(text="200 OK (JS Last Modified: {})".format(datetime.datetime.fromtimestamp(await get_last_timestamp())))
+async def _adjust_js():
+    with open("e-sim.js", "r") as file:
+        js = file.read()
 
-    app.router.add_get('/', index)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, 'localhost', PORT)
-    await site.start()
+    pattern = r'if \(!(\w+)\.match\("playstation\|xbox\|smart-tv\|smarttv"\) && \1\.mobile\(\) === null\) {\s+devtoolsDetector\.addListener\(function \((\w+)\) {\s+if \(\2\) {\s+window\.location\.reload\(\);\s+window\.parent\.location\.reload\(\);\s+}\s+}\);\s+devtoolsDetector\.launch\(\);\s+}\s+if \(navigator\.webdriver\) {\s+window\.location\.href = "https://google\.com";\s+}'
 
-    print("Server started at port {}".format(PORT))
+    js = re.sub(pattern, '', js)
+    pattern = r'(\w+) = (\w+)\((\w+)\) \? (\3) : (\w+)\((\3), btoa\(String\.fromCharCode\.apply\(null, new Uint8Array\(window\[(\w+)\]\)\)\)\);'
+    # matches = re.findall(pattern, js)
+    modified_text = re.sub(
+        pattern, r'\g<0>\ndocument.body.innerHTML = `<div class="product"><pre>` + JSON.stringify(\1, null, 2) + `</pre></div>`;document.head.innerHTML="<title>SUCCESS (200)</title>"; return', js)
 
-    return app
+    with open("e-sim.js", "w") as file:
+        file.write(modified_text)
+
+    LOG.info("JS-{}({} char) adjusted.".format(await get_last_timestamp(), len(modified_text)))
 
 
 # ----------------- titles.py -----------------
@@ -458,88 +526,37 @@ async def fetch_episodes(season_id: str):
             LOG.error(f"Error while getting title info: {e}")
             return []
 
-
-# ----------------- DB.py -----------------
-
-
-LOG = logging.getLogger("js")
-
-# -------------- Database --------------
+# ----------------- main.py -----------------
 
 
-def connect_to_database():
-    connection = sqlite3.connect("data.db")
-    cursor = connection.cursor()
+async def start_up_and_init():
+    if IS_ENCRYPTED:
+        global browser
+        import sys
+        if sys.platform == "win32":
+            browser = await launch(headless=False,  executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                                   args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
+        else:
+            browser = await launch(headless=False,  executablePath="/usr/bin/google-chrome",
+                                   args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
 
-    cursor.execute('''CREATE TABLE IF NOT EXISTS timestamps (
-                        id INTEGER PRIMARY KEY,
-                        timestamp INTEGER
-                    )''')
-    connection.commit()
+    app = web.Application()
+    app.router.add_get('/{id}', resolve_hash)
+    app.router.add_post('/write', req_write_to_console)
+    app.router.add_get('/api/{tail:.*}', handle_title_request)
 
-    return connection, cursor
+    async def index(request):
+        return web.Response(text="200 OK (JS Last Modified: {})".format(datetime.datetime.fromtimestamp(await get_last_timestamp())))
 
+    app.router.add_get('/', index)
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, 'localhost', PORT)
+    await site.start()
 
-async def get_last_timestamp():
-    connection, cursor = connect_to_database()
-    cursor.execute('SELECT timestamp FROM timestamps')
-    row = cursor.fetchone()
-    connection.close()
-    if row:
-        return row[0]
-    return 0
+    print("Server started at port {}".format(PORT))
 
-
-async def set_last_timestamp(timestamp):
-    connection, cursor = connect_to_database()
-    cursor.execute('DELETE FROM timestamps')
-    cursor.execute(
-        'INSERT INTO timestamps (timestamp) VALUES (?)', (timestamp,))
-    connection.commit()
-    connection.close()
-
-# -------------- JS Manipulation --------------
-
-
-async def _decode_js():
-    command = "webcrack e-min.js > e-sim.js"
-
-    import sys
-    if sys.platform == "win32":
-        command = "webcrack e-min.js > e-sim.js"
-        proc = await asyncio.create_subprocess_shell(
-            f"wsl -e bash -c \"{command}\"",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-    else:
-        command = "sudo " + command
-        proc = await asyncio.create_subprocess_shell(
-            f"bash -c \"{command}\"",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-    await proc.communicate()
-    LOG.info("JS-{} decoded.".format(await get_last_timestamp()))
-
-
-async def _adjust_js():
-    with open("e-sim.js", "r") as file:
-        js = file.read()
-
-    pattern = r'if \(!(\w+)\.match\("playstation\|xbox\|smart-tv\|smarttv"\) && \1\.mobile\(\) === null\) {\s+devtoolsDetector\.addListener\(function \((\w+)\) {\s+if \(\2\) {\s+window\.location\.reload\(\);\s+window\.parent\.location\.reload\(\);\s+}\s+}\);\s+devtoolsDetector\.launch\(\);\s+}\s+if \(navigator\.webdriver\) {\s+window\.location\.href = "https://google\.com";\s+}'
-
-    js = re.sub(pattern, '', js)
-    pattern = r'(\w+) = (\w+)\((\w+)\) \? (\3) : (\w+)\((\3), btoa\(String\.fromCharCode\.apply\(null, new Uint8Array\(window\[(\w+)\]\)\)\)\);'
-    # matches = re.findall(pattern, js)
-    modified_text = re.sub(
-        pattern, r'\g<0>\ndocument.body.innerHTML = `<div class="product"><pre>` + JSON.stringify(\1, null, 2) + `</pre></div>`;document.head.innerHTML="<title>SUCCESS (200)</title>"; return', js)
-
-    with open("e-sim.js", "w") as file:
-        file.write(modified_text)
-
-    LOG.info("JS-{}({} char) adjusted.".format(await get_last_timestamp(), len(modified_text)))
-
+    return app
 
 app = asyncio.get_event_loop().run_until_complete(start_up_and_init())
 try:
