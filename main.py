@@ -11,6 +11,10 @@ import bs4
 import logging
 import json
 from urllib.parse import quote
+from dotenv import load_dotenv
+from os import getenv
+
+load_dotenv()
 
 IS_ENCRYPTED = False
 
@@ -22,7 +26,7 @@ logging.basicConfig(level=logging.INFO,
 LOG = logging.getLogger("main")
 
 browser = None
-PORT = 80
+PORT = getenv("PORT", 801)
 
 async def resolve_hash(request):
     if not IS_ENCRYPTED:
