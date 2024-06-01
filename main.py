@@ -12,7 +12,8 @@ from modules.media import (
     _fetch_episodes,
     _get_title_info,
     _search_adv,
-    search_titles
+    search_titles,
+    get_imdb_top
 )
 from modules.youtube import get_yt_video_direct_url
 from modules.browser import resolve_hash, IS_ENCRYPTED
@@ -62,6 +63,8 @@ async def handle_title_request(request):
         return await _fetch_embed_source(request)
     elif request.path == "/api/featured":
         return web.json_response(await get_featured_titles())
+    elif request.path == "/api/imdb":
+        return web.json_response(await get_imdb_top())
     elif request.path == "/api/":
         return web.Response(text="200 OK")
     elif request.path == "/api/trailer":

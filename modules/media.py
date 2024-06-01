@@ -218,6 +218,25 @@ async def fetch_episodes(season_id: str):
             LOG.error(f"Error while getting title info: {e}")
             return []
 
+async def get_imdb_top():
+    async with ClientSession(timeout=ClientTimeout(total=10)) as session:
+        req = await session.get("https://attackertv.so/top-imdb")  
+        try:
+            soup = bs4.BeautifulSoup(await req.text(), "html.parser")
+            titles = []
+            for title in soup.find_all("div", class_="flw-item"):
+                titles.append({
+                    "title": title.find("a").get("title") if title.find("a") else "Unknown",
+                    "href": title.find("a").get("href") if title.find("a") else "Unknown",
+                    "category": title.find("span", class_="float-right fdi-type").text.strip() if title.find("span", class_="float-right fdi-type") else "Unknown",
+                    "poster": title.find("img").get("data-src") if title.find("img") else "Unknown",
+                    "quality": title.find("div", class_="pick film-poster-quality").text.strip() if title.find("div", class_="pick film-poster-quality") else "Unknown",
+                })
+            return titles
+        except Exception as e:
+            LOG.error(f"Error while getting featured titles: {e}")
+            return []
+        
 
 async def get_featured_titles():
     async with ClientSession(timeout=ClientTimeout(total=10)) as session:
