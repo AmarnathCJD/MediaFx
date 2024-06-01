@@ -40,7 +40,7 @@ async def resolve_hash(request):
                 return web.json_response({
                     "status": 200,
                     "id": request.match_info['id'],
-                    "file": content["file"],
+                    "file": content.get("file", ""),
                     "subs": content["subs"],
                 })
             return web.Response(text="{\"error\": \"No sources found\"}", status=404)
