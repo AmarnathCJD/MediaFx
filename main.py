@@ -14,11 +14,13 @@ from modules.media import (
     _search_adv,
     search_titles
 )
+from modules.youtube import get_yt_video_direct_url
 from modules.browser import resolve_hash, IS_ENCRYPTED
 from modules.database import get_last_timestamp
 from dotenv import load_dotenv
 from os import getenv
 import aiohttp_cors
+from aiohttp import ClientSession, ClientTimeout
 
 load_dotenv()
 
@@ -41,8 +43,12 @@ async def handle_title_request(request):
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type"
         })
-
-    if request.path == "/api/search":
+    if request.path == "/api/img":
+        url = request.query.get("url")
+        async with ClientSession(timeout=ClientTimeout(total=10)) as session:
+            async with session.get(url) as resp:
+                return web.Response(body=await resp.read(), content_type=resp.content_type)
+    elif request.path == "/api/search":
         return await search_titles(request)
     elif request.path == "/api/sa":
         return await _search_adv(request)
