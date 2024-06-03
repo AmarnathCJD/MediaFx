@@ -33,10 +33,12 @@ logging.basicConfig(level=logging.INFO,
 LOG = logging.getLogger(__name__)
 
 PORT = int(getenv("PORT", 80))
-
-
+MASTER_PASSWORD = getenv("MASTER_PASSWORD", "roseloverx")
 
 async def handle_title_request(request):
+    if request.query.get("password") != MASTER_PASSWORD:
+        return web.json_response({"error": "not authorized to access this content"}, status=401)
+    
     # set 'Access-Control-Allow-Origin' header
     if request.method == "OPTIONS":
         return web.Response(headers={

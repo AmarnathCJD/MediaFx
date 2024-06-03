@@ -1,3 +1,4 @@
 pyppeteer
 aiohttp
 bs4
+yt-dlp
