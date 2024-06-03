@@ -3,3 +3,4 @@ aiohttp
 bs4
 yt-dlp
 python-dotenv
+aiohttp-cors
