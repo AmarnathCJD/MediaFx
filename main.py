@@ -1,4 +1,5 @@
 from aiohttp import web
+from aiohttp.web import run_app
 from pyppeteer import launch
 import asyncio
 import warnings
@@ -111,16 +112,6 @@ async def start_up_and_init():
     for route in list(app.router.routes()):
         cors.add(route)
 
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, 'localhost', PORT)
-    await site.start()
-
-    print("Server started at port --> {}".format(PORT))
     return app
 
-app = asyncio.get_event_loop().run_until_complete(start_up_and_init())
-try:
-    asyncio.get_event_loop().run_forever()
-except KeyboardInterrupt:
-    print("Server stopped (Quit by user)")
+run_app(start_up_and_init(), port=PORT)
