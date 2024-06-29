@@ -1,7 +1,5 @@
 from aiohttp import web
 from aiohttp.web import run_app
-from pyppeteer import launch
-import asyncio
 import warnings
 import logging
 import datetime
@@ -17,7 +15,7 @@ from modules.media import (
     get_imdb_top
 )
 from modules.youtube import get_yt_video_direct_url
-from modules.browser import resolve_hash, IS_ENCRYPTED
+from modules.browser import resolve_hash
 from modules.database import get_last_timestamp
 from dotenv import load_dotenv
 from os import getenv
@@ -74,23 +72,13 @@ async def handle_title_request(request):
         url = request.query.get("url")
         id = url.split("/")[-1].split("?")[0]
         return web.json_response({"url": await get_yt_video_direct_url(id)})
-    return web.json_response({"error": "Invalid path"}, status=400)
+    return web.json_response({"error": "invalid path"}, status=400)
 
 
 # ----------------- main.py -----------------
 
 
 async def start_up_and_init():
-    if IS_ENCRYPTED:
-        global browser
-        import sys
-        if sys.platform == "win32":
-            browser = await launch(headless=False,  executablePath="C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
-                                   args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
-        else:
-            browser = await launch(headless=False,  executablePath="/usr/bin/google-chrome",
-                                   args=['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--disable-software-rasterizer', '--disable-setuid-sandbox'])
-
     app = web.Application()
     cors = aiohttp_cors.setup(app, defaults={
         "*": aiohttp_cors.ResourceOptions(
@@ -102,7 +90,7 @@ async def start_up_and_init():
     
     
     async def index(request):
-        return web.Response(text="200 OK (c) @AmarnathCJD (JS Last Modified: {})\n".format(datetime.datetime.fromtimestamp(await get_last_timestamp())))
+        return web.Response(text="200 OK (c) @AmarnathCJD (Last Modified: {})\n".format(datetime.datetime.fromtimestamp(await get_last_timestamp())))
 
 
     app.router.add_get('/{id}', resolve_hash)
